@@ -1,4 +1,11 @@
-package storage
+package client
+
+type ClientInterf interface {
+	AddUser(string) (int, error)
+	AddQuest(string, int) (int, error)
+	CompleteQuest(int, int) (string, error)
+	GetAllInfo(string) ([]UserQuestJSON, error)
+}
 
 type UserQuestJSON struct {
 	User_name  string `json:"user_name,omitempty"`
@@ -7,12 +14,4 @@ type UserQuestJSON struct {
 	Quest_name string `json:"quest_name,omitempty"`
 	Quest_id   int    `json:"quest_id,omitempty"`
 	Cost       int    `json:"cost,omitempty"`
-}
-
-type QuestDB interface {
-	AddUser(user UserQuestJSON) (string, error)
-	AddQuest(quest UserQuestJSON) (string, error)
-	CompleteQuest(userquest UserQuestJSON) (string, error)
-	GetAllInfo(user_id int) ([]UserQuestJSON, error)
-	Close()
 }

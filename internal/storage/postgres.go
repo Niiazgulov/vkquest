@@ -86,23 +86,23 @@ func (d *DataBase) AddQuest(quest UserQuestJSON) (string, error) {
 	return questID, nil
 }
 
-func (d *DataBase) CompleteQuest(userquest UserQuestJSON) error {
+func (d *DataBase) CompleteQuest(userquest UserQuestJSON) (string, error) {
 	query := `SELECT cost, quest_name FROM quests WHERE quest_id = $1`
 	rows, err := d.DB.Query(query, userquest.Quest_id)
 	if err != nil {
-		return fmt.Errorf("unable to return cost, quest_name from DB: %w", err)
+		return "", fmt.Errorf("unable to return cost, quest_name from DB: %w", err)
 	}
 	var cost int
 	var quest_name string
 	for rows.Next() {
 		err = rows.Scan(&cost, &quest_name)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 	err = rows.Err()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	query2 := `SELECT quest_name FROM history WHERE user_id = $1`
@@ -111,36 +111,36 @@ func (d *DataBase) CompleteQuest(userquest UserQuestJSON) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			fmt.Println("Everything is OK")
 		}
-		return fmt.Errorf("unable to scan History DB: %w", err)
+		return "", fmt.Errorf("unable to scan History DB: %w", err)
 	}
 	var quest_name2 string
 	for rows2.Next() {
 		err = rows2.Scan(&quest_name2)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if quest_name == quest_name2 {
-			return ErrNotUniqueAction
+			return "", ErrNotUniqueAction
 		}
 	}
 	err = rows2.Err()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	query3 := `UPDATE users SET balance = balance + $1 WHERE user_id = $2`
 	_, err = d.DB.Exec(query3, cost, userquest.User_id)
 	if err != nil {
-		return fmt.Errorf("[USERS DB] Error while updating Balance: %w", err)
+		return "", fmt.Errorf("[USERS DB] Error while updating Balance: %w", err)
 	}
 
 	query4 := `INSERT INTO history (user_id, quest_name, quest_id) VALUES ($1, $2, $3)`
 	_, err = d.DB.Exec(query4, userquest.User_id, quest_name, userquest.Quest_id)
 	if err != nil {
-		return fmt.Errorf("[HISTORY DB] Error while SAVING new HISTORY operation info: %w", err)
+		return "", fmt.Errorf("[HISTORY DB] Error while SAVING new HISTORY operation info: %w", err)
 	}
 
-	return nil
+	return quest_name, nil
 }
 
 func (d *DataBase) GetAllInfo(user_id int) ([]UserQuestJSON, error) {

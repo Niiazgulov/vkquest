@@ -17,7 +17,7 @@ func CreateUserHandler(repo storage.QuestDB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var tempStorage storage.UserQuestJSON
 		if err := json.NewDecoder(r.Body).Decode(&tempStorage); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		}
 		user := storage.UserQuestJSON{User_name: tempStorage.User_name, Balance: 0}
@@ -26,7 +26,12 @@ func CreateUserHandler(repo storage.QuestDB) http.HandlerFunc {
 			http.Error(w, "CreateUserHandler: can't add new user", http.StatusBadRequest)
 			return
 		}
-		result := "Added user " + user.User_name + " with ID: " + userID
+		userIDint, err := strconv.Atoi(userID)
+		if err != nil {
+			http.Error(w, "CreateUserHandler: can't convert userID", http.StatusBadRequest)
+			return
+		}
+		result := storage.UserQuestJSON{User_id: userIDint}
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -51,7 +56,12 @@ func CreateQuestHandler(repo storage.QuestDB) http.HandlerFunc {
 			http.Error(w, "CreateQuestHandler: can't add new quest", http.StatusBadRequest)
 			return
 		}
-		result := "Added quest " + quest.Quest_name + " with ID: " + questID
+		questIDint, err := strconv.Atoi(questID)
+		if err != nil {
+			http.Error(w, "CreateQuestHandler: can't convert questID", http.StatusBadRequest)
+			return
+		}
+		result := storage.UserQuestJSON{Quest_id: questIDint}
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -66,7 +76,7 @@ func NewActionHandler(repo storage.QuestDB) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		err := repo.CompleteQuest(tempStorage)
+		quest_name, err := repo.CompleteQuest(tempStorage)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotUniqueAction) {
 				http.Error(w, "Impossible - such user already made this operation!", http.StatusBadRequest)
@@ -75,9 +85,7 @@ func NewActionHandler(repo storage.QuestDB) http.HandlerFunc {
 			http.Error(w, "NewActionHandler: can't add new action", http.StatusBadRequest)
 			return
 		}
-		userId := strconv.Itoa(tempStorage.User_id)
-		questID := strconv.Itoa(tempStorage.Quest_id)
-		result := "UserID " + userId + " successfully made a quest with ID: " + questID
+		result := storage.UserQuestJSON{Quest_name: quest_name}
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
